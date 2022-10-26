@@ -55,10 +55,15 @@ const calcTotalPrice = (priceObj, vat = true) => {
 const getRawPrices = async () => {
   const prices = [];
 
-  const url = new URL("https://api.energidataservice.dk/dataset/Elspotprices");
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const dayAfterTomorrow = new Date();
+  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+
+  const url = new URL(config.apiUrl);
   const params = {
-    start: "2022-10-26",
-    end: "2022-10-27",
+    start: tomorrow.toISOString().split("T")[0],
+    end: dayAfterTomorrow.toISOString().split("T")[0],
     filter: '{"PriceArea":["DK2"]}',
     sort: "HourUTC ASC",
     timezone: "dk",
