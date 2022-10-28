@@ -33,6 +33,12 @@ const UtilityTariff = {
 const hourRange = 3;
 
 const capitalize = (s) => s && s[0].toUpperCase() + s.slice(1);
+const listStrings = (list) => {
+  if (list.length <= 1) {
+    return arr[0] + ".";
+  }
+  return `<b>${list.slice(0, -1).join(", ")}</b> og <b>${list.at(-1)}</b>`;
+};
 
 const calcTotalPrice = (priceObj, vat = true) => {
   const date = new Date(priceObj.HourDK);
@@ -104,7 +110,7 @@ const findCheapestHours = () => {
   let lowest = {
     date: null,
     start: null,
-    end: null,
+    hours: [],
     avgPrice: null,
   };
 
@@ -134,12 +140,16 @@ const findCheapestHours = () => {
     if (!theSum || acc.sum < theSum) {
       theSum = acc.sum;
       acc.index = index;
+      lowest.hours = [];
 
       const start = ranges[acc.index][0].HourDK.split("T");
 
+      ranges[acc.index].forEach((hour) => {
+        lowest.hours.push(`${hour.HourDK.split("T")[1].split(":")[0]}:00`);
+      });
+
       lowest.date = start[0];
       lowest.start = start[1];
-      lowest.end = ranges[acc.index][range.length - 1].HourDK.split("T")[1];
       lowest.avgPrice = acc.sum / hourRange;
     }
   });
@@ -148,8 +158,8 @@ const findCheapestHours = () => {
 };
 
 const sendNotification = () => {
-  const result = findCheapestHours();
-  const theDate = new Date(result.date);
+  const { date, hours, avgPrice } = findCheapestHours();
+  const theDate = new Date(date);
 
   fetch(`https://api.telegram.org/bot${config.telegramApiKey}/sendMessage`, {
     method: "POST",
@@ -161,11 +171,9 @@ const sendNotification = () => {
       parse_mode: "HTML",
       text: `<b>${capitalize(
         theDate.toLocaleString("da-DK", dateFormatoptions)
-      )}</b> ligger de <b>${hourRange}</b> billigste timer mellem <b>${
-        result.start
-      }</b> og <b>${
-        result.end
-      }</b>.\nGennemsnitsprisen for perioden er <b>${result.avgPrice.toLocaleString(
+      )}</b> er den billigste periode på <b>${hourRange}</b> timer: ${listStrings(
+        hours
+      )}.\nGennemsnitsprisen for perioden er <b>${avgPrice.toLocaleString(
         "da-DK"
       )}</b> kr/kWh.`,
     }),
@@ -173,7 +181,7 @@ const sendNotification = () => {
     .then((resp) => resp.json())
     .then((data) => {
       if (!data.ok) {
-        console.log(data);
+        console.error(data);
       }
     })
     .catch((error) => console.error(error));
