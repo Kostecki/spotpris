@@ -37,7 +37,8 @@ const listStrings = (list) => {
   if (list.length <= 1) {
     return arr[0] + ".";
   }
-  return `<b>${list.slice(0, -1).join(", ")}</b> og <b>${list.at(-1)}</b>`;
+
+  return `${list.slice(0, -1).join(", ")} og ${list.at(-1)}`;
 };
 
 const calcTotalPrice = (priceObj, vat = true) => {
@@ -161,21 +162,23 @@ const sendNotification = () => {
   const { date, hours, avgPrice } = findCheapestHours();
   const theDate = new Date(date);
 
-  fetch(`https://api.telegram.org/bot${config.telegramApiKey}/sendMessage`, {
+  const title = capitalize(theDate.toLocaleString("da-DK", dateFormatoptions));
+
+  fetch(config.ntfyUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Basic ${config.ntfyAuth}`,
     },
     body: JSON.stringify({
-      chat_id: config.telegramChatID,
-      parse_mode: "HTML",
-      text: `<b>${capitalize(
-        theDate.toLocaleString("da-DK", dateFormatoptions)
-      )}</b> er den billigste periode på <b>${hourRange}</b> timer: ${listStrings(
+      topic: "Random",
+      tags: ["zap"],
+      title,
+      message: `Den billigste periode på ${hourRange} timer er klokken ${listStrings(
         hours
-      )}.\nGennemsnitsprisen for perioden er <b>${avgPrice.toLocaleString(
+      )}.\nGennemsnitsprisen for perioden er ${avgPrice.toLocaleString(
         "da-DK"
-      )}</b> kr/kWh.`,
+      )} kr/kWh`,
     }),
   })
     .then((resp) => resp.json())
