@@ -62,15 +62,17 @@ const calcTotalPrice = (priceObj, vat = true) => {
 const getRawPrices = async () => {
   const prices = [];
 
+  const today = new Date();
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const dayAfterTomorrow = new Date();
-  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+
+  const start = today.toISOString().split("T")[0];
+  const end = tomorrow.toISOString().split("T")[0];
 
   const url = new URL(config.apiUrl);
   const params = {
-    start: tomorrow.toISOString().split("T")[0],
-    end: dayAfterTomorrow.toISOString().split("T")[0],
+    start: `${start}T14:00`,
+    end: `${end}T14:00`,
     filter: '{"PriceArea":["DK2"]}',
     sort: "HourUTC ASC",
     timezone: "dk",
@@ -109,7 +111,6 @@ const findCheapestHours = () => {
   let theSum = null;
 
   let lowest = {
-    date: null,
     start: null,
     hours: [],
     avgPrice: null,
@@ -149,7 +150,6 @@ const findCheapestHours = () => {
         lowest.hours.push(`${hour.HourDK.split("T")[1].split(":")[0]}:00`);
       });
 
-      lowest.date = start[0];
       lowest.start = start[1];
       lowest.avgPrice = acc.sum / hourRange;
     }
@@ -159,10 +159,10 @@ const findCheapestHours = () => {
 };
 
 const sendNotification = () => {
-  const { date, hours, avgPrice } = findCheapestHours();
-  const theDate = new Date(date);
+  const { hours, avgPrice } = findCheapestHours();
 
-  const title = capitalize(theDate.toLocaleString("da-DK", dateFormatoptions));
+  const today = new Date();
+  const title = capitalize(today.toLocaleString("da-DK", dateFormatoptions));
 
   fetch(config.ntfyUrl, {
     method: "POST",
@@ -174,11 +174,11 @@ const sendNotification = () => {
       topic: "Random",
       tags: ["zap"],
       title,
-      message: `Den billigste periode på ${hourRange} timer er klokken ${listStrings(
+      message: `De næste 24 timer er den billigste periode på ${hourRange} timer: ${listStrings(
         hours
-      )}.\nGennemsnitsprisen for perioden er ${avgPrice.toLocaleString(
-        "da-DK"
-      )} kr/kWh`,
+      )}.\nGennemsnitsprisen er ${avgPrice.toLocaleString("da-DK", {
+        maximumFractionDigits: 2,
+      })} kr/kWh`,
     }),
   })
     .then((resp) => resp.json())
