@@ -11,6 +11,9 @@
 
   lavlast: alle dage i perioden april-september + alle dage i perioden oktober-marts i tidsrummet 20.00-17.00.
   spidslast: alle dage i perioden oktober-marts i tidsrummet 17.00-20.00
+
+  Source: https://radiuselnet.dk/elnetkunder/tariffer-og-netabonnement/
+  Sanity Check: https://elspotpris.dk/
 */
 
 import config from "./config.json" assert { type: "json" };
@@ -158,11 +161,28 @@ const findCheapestHours = () => {
   return lowest;
 };
 
-const sendNotification = () => {
-  const { hours, avgPrice } = findCheapestHours();
+const sendNotification = (fail) => {
+  const payload = {
+    topic: "Random",
+    tags: ["zap"],
+  };
 
-  const today = new Date();
-  const title = capitalize(today.toLocaleString("da-DK", dateFormatoptions));
+  if (fail) {
+    payload.tags.push("rotating_light");
+    payload.message = "Something went wrong with todays prices";
+  } else {
+    const { hours, avgPrice } = findCheapestHours();
+    const today = new Date();
+
+    payload.message = `De næste 24 timer er den billigste periode på ${hourRange} timer: ${listStrings(
+      hours
+    )}.\nGennemsnitsprisen er ${avgPrice.toLocaleString("da-DK", {
+      maximumFractionDigits: 2,
+    })} kr/kWh`;
+    payload.title = capitalize(
+      today.toLocaleString("da-DK", dateFormatoptions)
+    );
+  }
 
   fetch(config.ntfyUrl, {
     method: "POST",
@@ -170,16 +190,7 @@ const sendNotification = () => {
       "Content-Type": "application/json",
       Authorization: `Basic ${config.ntfyAuth}`,
     },
-    body: JSON.stringify({
-      topic: "Random",
-      tags: ["zap"],
-      title,
-      message: `De næste 24 timer er den billigste periode på ${hourRange} timer: ${listStrings(
-        hours
-      )}.\nGennemsnitsprisen er ${avgPrice.toLocaleString("da-DK", {
-        maximumFractionDigits: 2,
-      })} kr/kWh`,
-    }),
+    body: JSON.stringify(payload),
   })
     .then((resp) => resp.json())
     .then((data) => {
@@ -191,4 +202,4 @@ const sendNotification = () => {
 };
 
 const prices = await getRawPrices();
-sendNotification();
+sendNotification(!prices?.records?.length);
