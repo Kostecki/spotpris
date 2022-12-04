@@ -162,9 +162,11 @@ const findCheapestHours = () => {
 };
 
 const sendNotification = (fail) => {
+  const today = new Date();
   const payload = {
     topic: "Random",
     tags: ["zap"],
+    title: capitalize(today.toLocaleString("da-DK", dateFormatoptions)),
   };
 
   if (fail) {
@@ -172,16 +174,12 @@ const sendNotification = (fail) => {
     payload.message = "Something went wrong with todays prices";
   } else {
     const { hours, avgPrice } = findCheapestHours();
-    const today = new Date();
 
     payload.message = `De næste 24 timer er den billigste periode på ${hourRange} timer: ${listStrings(
       hours
     )}.\nGennemsnitsprisen er ${avgPrice.toLocaleString("da-DK", {
       maximumFractionDigits: 2,
     })} kr/kWh`;
-    payload.title = capitalize(
-      today.toLocaleString("da-DK", dateFormatoptions)
-    );
   }
 
   fetch(config.ntfyUrl, {
