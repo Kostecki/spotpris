@@ -161,25 +161,25 @@ const findCheapestHours = () => {
   return lowest;
 };
 
-const sendNotification = (fail) => {
+const sendNotification = (success) => {
   const today = new Date();
   const payload = {
-    topic: "Random",
-    tags: ["zap"],
+    topic: "Spotpris",
     title: capitalize(today.toLocaleString("da-DK", dateFormatoptions)),
   };
 
-  if (fail) {
-    payload.tags.push("rotating_light");
-    payload.message = "Something went wrong with todays prices";
-  } else {
+  if (success) {
     const { hours, avgPrice } = findCheapestHours();
 
+    payload.tags = ["zap"];
     payload.message = `De næste 24 timer er den billigste periode på ${hourRange} timer: ${listStrings(
       hours
     )}.\nGennemsnitsprisen er ${avgPrice.toLocaleString("da-DK", {
       maximumFractionDigits: 2,
     })} kr/kWh`;
+  } else {
+    payload.tags = ["rotating_light"];
+    payload.message = "Something went wrong with todays prices";
   }
 
   fetch(config.ntfyUrl, {
@@ -200,4 +200,4 @@ const sendNotification = (fail) => {
 };
 
 const prices = await getRawPrices();
-sendNotification(!prices?.records?.length);
+sendNotification(prices.length > 0);
